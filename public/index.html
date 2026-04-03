@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>BiteMatch SaaS | The Ultimate Digital Menu & Discovery Platform</title>
+  <link rel="stylesheet" href="css/common.css"/>
+  <style>
+    body { background: radial-gradient(ellipse at top, #1A140E 0%, var(--bg) 80%); min-height: 100vh; display: flex; flex-direction: column; }
+    .hero { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 60px 20px; }
+    .hero-badge { background: rgba(212,150,58,.1); color: var(--primary); padding: 6px 16px; border-radius: 20px; font-weight: 600; font-size: .85rem; border: 1px solid rgba(212,150,58,.3); margin-bottom: 24px; text-transform: uppercase; letter-spacing: 1px; }
+    .hero-title { font-family: var(--font-display); font-size: 4rem; line-height: 1.1; margin-bottom: 24px; max-width: 900px; text-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+    .hero-sub { color: var(--dim); font-size: 1.25rem; max-width: 650px; margin-bottom: 40px; line-height: 1.6; }
+    .btn-group { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+    .btn-large { padding: 18px 36px; font-size: 1.1rem; border-radius: 12px; transition: transform 0.2s, box-shadow 0.2s; }
+    .btn-large:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(212,150,58,.4); }
+    
+    .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 32px; max-width: 1100px; margin: 80px auto 40px; width: 100%; padding: 0 20px; }
+    .feat-card { background: rgba(30, 30, 30, 0.4); border: 1px solid rgba(255,255,255,0.05); border-radius: 24px; padding: 40px 32px; text-align: left; backdrop-filter: blur(10px); transition: transform 0.3s, border-color 0.3s; }
+    .feat-card:hover { transform: translateY(-5px); border-color: rgba(212,150,58,.3); background: rgba(40, 40, 40, 0.6); }
+    .feat-icon { font-size: 3rem; margin-bottom: 20px; background: linear-gradient(135deg, var(--primary), #FFC67D); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .feat-title { font-size: 1.4rem; font-family: var(--font-display); margin-bottom: 12px; color: #fff; }
+    .feat-desc { color: var(--dim); font-size: 1rem; line-height: 1.6; }
+    
+    .pricing { text-align: center; padding: 60px 20px; max-width: 600px; margin: 0 auto; }
+    .pricing h2 { font-family: var(--font-display); font-size: 2.5rem; margin-bottom: 16px; }
+    
+    .footer { text-align: center; padding: 40px; color: var(--dim); font-size: .9rem; border-top: 1px solid rgba(255,255,255,0.05); margin-top: auto; }
+    .footer a { color: var(--dim); text-decoration: none; margin: 0 15px; transition: color 0.2s; }
+    .footer a:hover { color: var(--primary); }
+    @media (max-width: 768px) { .hero-title { font-size: 2.8rem; } .features { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+  <div class="hero">
+    <div class="hero-badge">The Future of Dining Is Here</div>
+    <h1 class="hero-title">Stop Handing Out Menus. Start Creating Experiences.</h1>
+    <p class="hero-sub">Give your guests a premium digital menu with an AI-like Matchmaker Quiz that suggests the perfect meal combo based on their cravings. One universal QR code is all you need.</p>
+    
+    <div class="btn-group">
+      <a href="/admin.html" class="btn btn-primary btn-large">Restaurant Login</a>
+      <a href="#features" class="btn btn-outline btn-large" style="background: rgba(255,255,255,0.05);">See How It Works</a>
+    </div>
+
+    <div class="features" id="features">
+      <div class="feat-card">
+        <div class="feat-icon">✨</div>
+        <div class="feat-title">The Matchmaker Quiz</div>
+        <div class="feat-desc">Guests answer 5 quick, interactive questions about their cravings (spicy vs mild, sweet vs savory, etc.) to get a highly personalized, mouth-watering meal recommendation. Increase average order value instantly.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">📱</div>
+        <div class="feat-title">Stunning Digital Menu</div>
+        <div class="feat-desc">Ditch the PDFs. Offer a mobile-first, app-like browsing experience fully matched to your restaurant's branding, colors, and logos. Easily toggle items out of stock with one click.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🖨️</div>
+        <div class="feat-title">One Universal QR Code</div>
+        <div class="feat-desc">No more managing dozens of table-specific codes or complex ordering hardware. Print one single QR code for your host stand, tables, and social media. Setup takes literally 5 minutes.</div>
+      </div>
+    </div>
+    
+  </div>
+
+  <footer class="footer">
+    <a href="super-admin.html">Platform SaaS Admin</a>
+    <a href="mailto:hello@example.com">Contact Sales</a>
+    <a href="#">Terms & Privacy</a>
+    <div style="margin-top:20px;opacity:.4">© 2026 Powered by BiteMatch Platform</div>
+  </footer>
+
+</body>
+</html>

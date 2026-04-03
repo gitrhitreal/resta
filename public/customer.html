@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Loading... | Restaurant SaaS</title>
+  <link rel="stylesheet" href="/css/common.css"/>
+  <link rel="stylesheet" href="/css/customer.css"/>
+</head>
+<body>
+
+<div class="customer-app">
+
+  <nav class="top-nav">
+    <button class="nav-back" id="btn-back" onclick="navigate('home')">← Back</button>
+    <div style="flex:1"></div>
+  </nav>
+
+  <header class="header" id="header">
+    <div class="kicker" id="h-kicker">Fine Dining Experience</div>
+    <div class="logo" id="h-logo">🍽️</div>
+    <h1 class="title" id="h-name">Restaurant</h1>
+    <p class="tagline" id="h-tag"></p>
+  </header>
+
+  <!-- ════ SCREENS ════ -->
+
+  <!-- 1. Home -->
+  <main class="container active" id="view-home">
+    <div style="display:flex; flex-direction:column; gap:16px;">
+      <a class="action-btn" onclick="navigate('surprise')" style="padding:40px 20px; font-size:1.8rem; display:flex; flex-direction:column; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:16px; align-items:center; text-align:center; cursor:pointer;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
+        <span style="font-size:3rem; margin-bottom:12px;">🎲</span> 
+        <span style="font-family:var(--font-display);">Surprise Me</span>
+      </a>
+      <a class="action-btn primary" onclick="navigate('quiz')" style="padding:40px 20px; font-size:1.8rem; display:flex; flex-direction:column; border-radius:16px; align-items:center; text-align:center; background: linear-gradient(135deg, var(--primary), var(--accent2)); border: none; cursor:pointer; color:#fff; box-shadow: 0 4px 14px rgba(212,150,58,0.3);" onmouseover="this.style.filter='brightness(1.15)'" onmouseout="this.style.filter='brightness(1)'">
+        <span style="font-size:3rem; margin-bottom:12px;">✨</span> 
+        <span style="font-family:var(--font-display);">Take the Quiz</span>
+      </a>
+    </div>
+  </main>
+
+  <!-- 2. Menu Browse -->
+  <main class="container" id="view-browse">
+    <div class="cat-list" id="menu-cat-filters"></div>
+    <div id="menu-list"></div>
+  </main>
+
+  <!-- 3. Surprise Me (Picker) -->
+  <main class="container" id="view-surprise">
+    <h2 class="qz-title">What are you after?</h2>
+    <p style="text-align:center; color:var(--dim); margin-bottom:24px;">Pick a category and we'll pick the dish</p>
+    <div class="picker-grid" id="picker-grid">
+      <!-- Injected categories -->
+    </div>
+    <div class="picker-card" style="margin-top:12px; grid-column:1/-1" onclick="surpriseMatch('all')">
+      <div class="picker-emoji">🎲</div>
+      <div class="picker-label">Anything goes!</div>
+    </div>
+  </main>
+
+  <!-- 4. Matchmaker Quiz -->
+  <main class="container" id="view-quiz">
+    <h2 class="qz-title" id="q-text"></h2>
+    <div id="q-opts" style="margin-top:24px"></div>
+  </main>
+
+  <!-- 5. Match Result -->
+  <main class="container" id="view-match">
+    <h2 class="qz-title">We recommend...</h2>
+    <div id="match-result"></div>
+    <button class="btn btn-secondary" style="width:100%; max-width:300px; margin: 24px auto; display:block" onclick="navigate('home')">Back to Home</button>
+  </main>
+
+
+
+  <div class="toast" id="toast"></div>
+
+</div> <!-- /.customer-app -->
+
+  <!-- Party.js for confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/party-js@latest/bundle/party.min.js"></script>
+  <script src="/js/customer.js"></script>
+</body>
+</html>

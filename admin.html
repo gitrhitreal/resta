@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Admin — Restaurant Manager</title>
+  <meta name="description" content="Restaurant management dashboard — manage your menu, branding, and settings"/>
+  <link rel="stylesheet" href="css/common.css"/>
+  <link rel="stylesheet" href="css/admin.css"/>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════
+     LOGIN SCREEN
+════════════════════════════════════════ -->
+<div class="login-screen" id="login-screen">
+  <div class="login-card">
+    <div class="login-logo" id="login-logo">🪔</div>
+    <h1 class="login-title" id="login-title">Saffron & Smoke</h1>
+    <p class="login-subtitle">Restaurant Management</p>
+    <div class="login-divider"></div>
+    <div class="login-error" id="login-error">Invalid username or password</div>
+    <div class="field-row">
+      <label class="field-label">Username</label>
+      <input class="field-input" id="login-user" type="text" placeholder="Enter username" autocomplete="username"/>
+    </div>
+    <div class="field-row">
+      <label class="field-label">Password</label>
+      <input class="field-input" id="login-pass" type="password" placeholder="Enter password" autocomplete="current-password"/>
+    </div>
+    <div class="login-actions">
+      <button class="btn btn-g" id="btn-login">Sign In →</button>
+    </div>
+    <p class="login-footer">Default: admin / admin</p>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     ADMIN APP
+════════════════════════════════════════ -->
+<div class="admin-app" id="admin-app">
+
+  <!-- Sidebar overlay (mobile) -->
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-brand">
+        <div class="sidebar-logo" id="sidebar-logo">🪔</div>
+        <div>
+          <div class="sidebar-name" id="sidebar-name">Saffron & Smoke</div>
+          <div class="sidebar-badge">Admin Panel</div>
+        </div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <button class="nav-item active" data-page="dashboard">
+        <span class="nav-icon">📊</span> Dashboard
+      </button>
+      <button class="nav-item" data-page="menu">
+        <span class="nav-icon">🍽️</span> Menu Items
+        <span class="nav-badge" id="menu-count-badge">28</span>
+      </button>
+      <div class="nav-section-label" style="margin-top:.6rem">Settings</div>
+      <button class="nav-item" data-page="branding">
+        <span class="nav-icon">🎨</span> Branding
+      </button>
+      <button class="nav-item" data-page="settings">
+        <span class="nav-icon">⚙️</span> Settings
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="nav-item" id="btn-view-site">
+        <span class="nav-icon">🌐</span> View Customer Site
+      </button>
+      <button class="nav-item" id="btn-logout">
+        <span class="nav-icon">🚪</span> Sign Out
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <div class="top-bar">
+      <div class="top-bar-left">
+        <button class="mobile-toggle" id="mobile-toggle">☰</button>
+        <h1 class="page-title" id="page-title">Dashboard</h1>
+      </div>
+      <div class="top-bar-right">
+        <button class="btn btn-sm btn-o" id="top-add-btn" style="display:none">+ Add Item</button>
+      </div>
+    </div>
+
+    <!-- ═══ DASHBOARD PAGE ═══ -->
+    <div class="content-area" id="page-dashboard">
+      <div class="stats-grid" id="stats-grid"></div>
+      <div class="brand-section">
+        <div class="brand-section-title">📋 Quick Actions</div>
+        <div class="data-actions">
+          <div class="data-card" id="qa-add-item">
+            <div class="data-card-icon">➕</div>
+            <div class="data-card-title">Add Menu Item</div>
+            <div class="data-card-desc">Add a new dish to your menu</div>
+          </div>
+          <div class="data-card" id="qa-edit-brand">
+            <div class="data-card-icon">🎨</div>
+            <div class="data-card-title">Edit Branding</div>
+            <div class="data-card-desc">Update logo, name & colors</div>
+          </div>
+          <div class="data-card" id="qa-export">
+            <div class="data-card-icon">📤</div>
+            <div class="data-card-title">Export Backup</div>
+            <div class="data-card-desc">Download all data as JSON</div>
+          </div>
+          <div class="data-card" id="qa-view-site">
+            <div class="data-card-icon">🌐</div>
+            <div class="data-card-title">View Customer Site</div>
+            <div class="data-card-desc">See what your customers see</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ MENU PAGE ═══ -->
+    <div class="content-area" id="page-menu" style="display:none">
+      <div class="table-controls">
+        <div class="search-box">
+          <input type="text" id="menu-search" placeholder="Search menu items..."/>
+        </div>
+        <div class="filter-pills" id="menu-filters">
+          <button class="filter-pill active" data-filter="all">All</button>
+          <button class="filter-pill" data-filter="main">Mains</button>
+          <button class="filter-pill" data-filter="drink">Drinks</button>
+          <button class="filter-pill" data-filter="dessert">Desserts</button>
+          <button class="filter-pill" data-filter="bread">Breads</button>
+          <button class="filter-pill" data-filter="other">Sides</button>
+        </div>
+      </div>
+      <div class="menu-grid" id="menu-grid"></div>
+      <button class="btn btn-o" id="btn-add-menu-item" style="margin-top:1rem; width: auto; align-self: flex-start;">+ Add New Item</button>
+    </div>
+
+    <!-- ═══ BRANDING PAGE ═══ -->
+    <div class="content-area" id="page-branding" style="display:none">
+      <!-- Logo -->
+      <div class="brand-section">
+        <div class="brand-section-title">🖼️ Restaurant Logo</div>
+        <div class="logo-upload-zone" id="brand-logo-zone">
+          <div class="logo-circle" id="brand-logo-preview">🪔</div>
+          <div class="img-upload-hint">
+            <strong>Upload your logo</strong>
+            Drag & drop an image here, or tap to browse<br>
+            <span style="font-size:.7rem;opacity:.6">PNG, JPG, SVG — square works best</span>
+          </div>
+          <input type="file" id="brand-logo-input" accept="image/*" style="display:none"/>
+          <div style="display:flex; gap:.6rem">
+            <button class="btn btn-sm btn-o" id="btn-browse-logo">Browse Files</button>
+            <button class="btn btn-sm btn-red" id="btn-remove-logo" style="display:none">Remove</button>
+          </div>
+        </div>
+        <div style="margin-top:1rem">
+          <div class="section-title">Or choose an emoji logo</div>
+          <div class="emoji-grid" id="brand-emoji-grid"></div>
+        </div>
+      </div>
+
+      <!-- Name & tagline -->
+      <div class="brand-section">
+        <div class="brand-section-title">✏️ Restaurant Details</div>
+        <div class="field-row">
+          <label class="field-label">Restaurant Name</label>
+          <input class="field-input" id="brand-name" placeholder="e.g. Saffron & Smoke"/>
+        </div>
+        <div class="field-row">
+          <label class="field-label">Tagline</label>
+          <input class="field-input" id="brand-tagline" placeholder="e.g. Where spice meets flame"/>
+        </div>
+        <div class="field-row">
+          <label class="field-label">Kicker / Category Label</label>
+          <input class="field-input" id="brand-kicker" placeholder="e.g. Fine Dining Experience"/>
+        </div>
+        <div class="field-row">
+          <label class="field-label">Currency Symbol</label>
+          <input class="field-input" id="brand-currency" placeholder="e.g. £, $, €, ₹" style="max-width:120px"/>
+        </div>
+      </div>
+
+      <!-- Colors -->
+      <div class="brand-section">
+        <div class="brand-section-title">🎨 Color Scheme</div>
+        <div class="color-picker-row">
+          <div class="color-swatch"><input type="color" id="color-primary" value="#D4963A"/></div>
+          <span class="color-label">Primary</span>
+          <span class="color-value" id="color-primary-hex">#D4963A</span>
+        </div>
+        <div class="color-picker-row">
+          <div class="color-swatch"><input type="color" id="color-accent" value="#E8C87A"/></div>
+          <span class="color-label">Accent</span>
+          <span class="color-value" id="color-accent-hex">#E8C87A</span>
+        </div>
+        <div class="color-picker-row">
+          <div class="color-swatch"><input type="color" id="color-accent2" value="#B05A2F"/></div>
+          <span class="color-label">Accent 2</span>
+          <span class="color-value" id="color-accent2-hex">#B05A2F</span>
+        </div>
+        <div class="color-picker-row">
+          <div class="color-swatch"><input type="color" id="color-bg" value="#0C0A08"/></div>
+          <span class="color-label">Background</span>
+          <span class="color-value" id="color-bg-hex">#0C0A08</span>
+        </div>
+      </div>
+
+      <button class="btn btn-g" id="btn-save-branding" style="max-width:300px">Save Branding ✓</button>
+    </div>
+
+    <!-- ═══ SETTINGS PAGE ═══ -->
+    <div class="content-area" id="page-settings" style="display:none">
+      <div class="brand-section">
+        <div class="brand-section-title">💾 Data Management</div>
+        <div class="data-actions">
+          <div class="data-card" id="btn-export-data">
+            <div class="data-card-icon">📤</div>
+            <div class="data-card-title">Export Backup</div>
+            <div class="data-card-desc">Download all menu & branding data as a JSON file</div>
+          </div>
+          <div class="data-card" id="btn-import-data">
+            <div class="data-card-icon">📥</div>
+            <div class="data-card-title">Import Backup</div>
+            <div class="data-card-desc">Restore from a previously exported JSON file</div>
+          </div>
+        </div>
+        <input type="file" id="import-file-input" accept=".json" style="display:none"/>
+      </div>
+
+      <div class="password-section">
+        <div class="brand-section-title">🔒 Change Password</div>
+        <div class="field-row">
+          <label class="field-label">Current Password</label>
+          <input class="field-input" type="password" id="current-pass" placeholder="Enter current password"/>
+        </div>
+        <div class="field-row">
+          <label class="field-label">New Password</label>
+          <input class="field-input" type="password" id="new-pass" placeholder="Enter new password"/>
+        </div>
+        <div class="field-row">
+          <label class="field-label">Confirm New Password</label>
+          <input class="field-input" type="password" id="confirm-pass" placeholder="Confirm new password"/>
+        </div>
+        <button class="btn btn-o btn-sm" id="btn-change-pass" style="max-width:200px; margin-top:.5rem">Update Password</button>
+      </div>
+
+      <div class="brand-section" style="margin-top:1.2rem">
+        <div class="brand-section-title">⚠️ Danger Zone</div>
+        <div class="data-actions">
+          <div class="data-card danger" id="btn-reset-data">
+            <div class="data-card-icon">🗑️</div>
+            <div class="data-card-title" style="color:var(--danger)">Reset All Data</div>
+            <div class="data-card-desc">Restore all menu items and branding to factory defaults</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main-content -->
+</div><!-- /admin-app -->
+
+<!-- ════ ITEM MODAL ════ -->
+<div class="modal-overlay" id="item-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title" id="modal-title">Add Menu Item</h2>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+
+    <div class="field-row">
+      <label class="field-label">Item Name *</label>
+      <input class="field-input" id="item-name" placeholder="e.g. Saffron Butter Chicken"/>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:.8rem">
+      <div class="field-row">
+        <label class="field-label">Price *</label>
+        <input class="field-input" id="item-price" placeholder="e.g. 16"/>
+      </div>
+      <div class="field-row">
+        <label class="field-label">Category</label>
+        <select class="field-input field-select" id="item-cat">
+          <option value="main">Main</option>
+          <option value="drink">Drink</option>
+          <option value="dessert">Dessert</option>
+          <option value="bread">Bread</option>
+          <option value="other">Starter / Side</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <label class="field-label">Description</label>
+      <textarea class="field-input field-textarea" id="item-desc" placeholder="Short description of the dish..."></textarea>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:.8rem">
+      <div class="field-row">
+        <label class="field-label">Dietary</label>
+        <select class="field-input field-select" id="item-diet">
+          <option value="meat">Meat</option>
+          <option value="fish">Fish</option>
+          <option value="vegetarian">Vegetarian</option>
+          <option value="vegan">Vegan</option>
+        </select>
+      </div>
+      <div class="field-row">
+        <label class="field-label">Status</label>
+        <select class="field-input field-select" id="item-active">
+          <option value="true">Active</option>
+          <option value="false">Hidden</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <label class="field-label">Tags (comma separated)</label>
+      <input class="field-input" id="item-tags" placeholder="e.g. spicy, meaty, bold, rich"/>
+    </div>
+
+    <!-- Image section -->
+    <div class="field-row">
+      <label class="field-label">Item Image</label>
+      <div class="img-upload-area" id="item-img-zone">
+        <div class="img-upload-preview" id="item-img-preview">🍽️</div>
+        <div class="img-upload-hint">
+          <strong>Upload image</strong>
+          Or enter an emoji below
+        </div>
+        <input type="file" id="item-img-input" accept="image/*" style="display:none"/>
+        <div style="display:flex; gap:.5rem; align-items:center; flex-wrap:wrap">
+          <button class="btn btn-sm btn-o" id="btn-item-browse">Browse</button>
+          <button class="btn btn-sm btn-red" id="btn-item-clear-img" style="display:none">Remove</button>
+          <span style="color:var(--dim); font-size:.78rem">or</span>
+          <input class="field-input" id="item-emoji" placeholder="🍛" style="width:60px; text-align:center; margin:0"/>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-o" id="modal-cancel">Cancel</button>
+      <button class="btn btn-g" id="modal-save">Save Item</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ DELETE CONFIRM MODAL ════ -->
+<div class="modal-overlay" id="delete-modal">
+  <div class="modal" style="max-width:400px; text-align:center">
+    <div style="font-size:2.5rem; margin-bottom:.8rem">🗑️</div>
+    <h2 class="modal-title" style="text-align:center; margin-bottom:.5rem">Delete Item?</h2>
+    <p style="color:var(--mid); font-size:.88rem; margin-bottom:1.5rem" id="delete-msg">
+      Are you sure you want to remove this item from the menu?
+    </p>
+    <div class="modal-actions">
+      <button class="btn btn-o" id="delete-cancel">Cancel</button>
+      <button class="btn btn-red" id="delete-confirm">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/data.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>

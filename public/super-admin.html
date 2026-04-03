@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Platform Admin — Restaurant SaaS</title>
+  <link rel="stylesheet" href="css/common.css"/>
+  <link rel="stylesheet" href="css/admin.css"/>
+</head>
+<body>
+
+<!-- ════ LOGIN ════ -->
+<div class="login-screen" id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">⚡</div>
+    <div class="login-title">Platform Admin</div>
+    <div class="login-sub">Restaurant SaaS Control Panel</div>
+    <div class="login-divider"></div>
+    <div class="login-fields">
+      <div class="login-error" id="login-error">Invalid credentials</div>
+      <div class="form-group">
+        <label class="form-label">Username</label>
+        <input class="form-input" id="login-user" placeholder="superadmin" autocomplete="username"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input class="form-input" id="login-pass" type="password" placeholder="••••••" autocomplete="current-password"/>
+      </div>
+      <button class="btn btn-primary login-btn" id="btn-login">Sign In →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ APP ════ -->
+<div class="admin-app" id="admin-app">
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">⚡</div>
+      <div>
+        <div class="sidebar-name">Platform Admin</div>
+        <div class="sidebar-role">Super Admin</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Overview</div>
+      <div class="nav-item active" data-page="dashboard"><span class="nav-icon">📊</span> Dashboard</div>
+      <div class="nav-item" data-page="restaurants"><span class="nav-icon">🏪</span> Restaurants <span class="nav-badge" id="rest-count">0</span></div>
+      <div class="nav-section">Settings</div>
+      <div class="nav-item" data-page="settings"><span class="nav-icon">⚙️</span> Settings</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="nav-item" id="btn-logout"><span class="nav-icon">🚪</span> Sign Out</div>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <div class="top-bar">
+      <div class="top-bar-left">
+        <button class="mobile-toggle" id="mobile-toggle">☰</button>
+        <h1 class="page-title" id="page-title">Dashboard</h1>
+      </div>
+      <div>
+        <button class="btn btn-sm btn-secondary" onclick="document.getElementById('btn-logout').click()">Sign Out</button>
+      </div>
+    </div>
+
+    <!-- Dashboard page -->
+    <div class="content-area" id="page-dashboard">
+      <div class="stats-grid" id="stats-grid"></div>
+      <div class="brand-section">
+        <div class="brand-section-title">🏪 All Restaurants</div>
+        <div id="dash-restaurants-preview"></div>
+      </div>
+    </div>
+
+    <!-- Restaurants page -->
+    <div class="content-area" id="page-restaurants" style="display:none">
+      <div class="menu-toolbar">
+        <div class="menu-search-wrap">
+          <input class="menu-search" id="rest-search" placeholder="Search restaurants..."/>
+        </div>
+        <button class="btn btn-primary" onclick="openRestModal()">+ Add Restaurant</button>
+      </div>
+      <div id="restaurants-list"></div>
+    </div>
+
+    <!-- Settings page -->
+    <div class="content-area" id="page-settings" style="display:none">
+      <div class="brand-section">
+        <div class="brand-section-title">🔒 Change Password</div>
+        <div class="form-group"><label class="form-label">Current Password</label><input class="form-input" id="current-pass" type="password"/></div>
+        <div class="form-group"><label class="form-label">New Password</label><input class="form-input" id="new-pass" type="password"/></div>
+        <div class="form-group"><label class="form-label">Confirm New Password</label><input class="form-input" id="confirm-pass" type="password"/></div>
+        <button class="btn btn-primary" id="btn-change-pass">Change Password</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Rest Modal -->
+<div class="modal-overlay" id="modal-rest">
+  <form class="modal-content" id="form-rest" onsubmit="event.preventDefault(); saveRestaurant();">
+    <div class="modal-header">
+      <h3 id="modal-title-rest">Add Restaurant</h3>
+      <button type="button" class="modal-close" onclick="closeModal('rest')">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="mr-id"/>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Restaurant Name</label><input class="form-input" id="mr-name" required/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Login ID (Username)</label><input class="form-input" id="mr-user" required/></div>
+        <div class="form-group"><label class="form-label">Password</label><input class="form-input" id="mr-pass" type="password"/></div>
+      </div>
+      <div class="form-group"><label class="form-label">Address</label><input class="form-input" id="mr-address"/></div>
+      <div class="form-group"><label class="form-label">Contact Info</label><input class="form-input" id="mr-contact"/></div>
+      <div style="font-size:0.85rem; color:var(--dim); margin-top:-8px; margin-bottom:12px;" id="mr-pass-hint">Leave password blank to keep current password when editing.</div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-secondary" onclick="closeModal('rest')">Cancel</button>
+      <button type="submit" class="btn btn-primary">Save Account</button>
+    </div>
+  </form>
+</div>
+
+<!-- QR Modal -->
+<div class="modal-overlay" id="modal-qr">
+  <div class="modal-content" style="text-align:center; padding: 40px; max-width: 400px; margin: 0 auto;">
+    <div class="modal-header">
+      <h3 id="modal-title-qr">Restaurant QR</h3>
+      <button type="button" class="modal-close" onclick="closeModal('qr')">×</button>
+    </div>
+    <div class="modal-body">
+      <img id="sa-qr-img" src="" style="width: 250px; height: 250px; border-radius: 12px; border: 1px solid var(--border); margin: 0 auto 24px; display: block;" alt="QR Code">
+      <div>
+        <a href="#" id="sa-qr-download" class="btn btn-primary" download>Download QR Code</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/api.js"></script>
+<script>
+let restaurants = [];
+
+// ─── Auth ─────────────────────────────────────
+document.getElementById('btn-login').onclick = async () => {
+  const user = document.getElementById('login-user').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  try {
+    const data = await API.post('/api/auth/super-login', { username: user, password: pass });
+    API.setToken(data.token);
+    showApp();
+  } catch (e) {
+    document.getElementById('login-error').classList.add('show');
+  }
+};
+document.getElementById('login-pass').onkeydown = e => { if (e.key === 'Enter') document.getElementById('btn-login').click(); };
+document.getElementById('btn-logout').onclick = () => { API.clearToken(); location.reload(); };
+
+// Check token
+if (API.getToken()) {
+  API.get('/api/super/stats').then(() => showApp()).catch(() => { API.clearToken(); });
+}
+
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('admin-app').classList.add('active');
+  loadDashboard();
+}
+
+// ─── Navigation ──────────────────────────────
+const pages = ['dashboard', 'restaurants', 'settings'];
+document.querySelectorAll('.nav-item[data-page]').forEach(item => {
+  item.onclick = () => {
+    document.querySelectorAll('.nav-item[data-page]').forEach(i => i.classList.remove('active'));
+    item.classList.add('active');
+    pages.forEach(p => document.getElementById('page-' + p).style.display = p === item.dataset.page ? '' : 'none');
+    document.getElementById('page-title').textContent = item.querySelector('span:last-child')?.textContent?.trim() || item.textContent.trim();
+    if (item.dataset.page === 'restaurants') loadRestaurants();
+    if (item.dataset.page === 'dashboard') loadDashboard();
+    closeSidebar();
+  };
+});
+document.getElementById('mobile-toggle').onclick = () => { document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebar-overlay').classList.add('open'); };
+document.getElementById('sidebar-overlay').onclick = closeSidebar;
+function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebar-overlay').classList.remove('open'); }
+
+// ─── Dashboard ───────────────────────────────
+async function loadDashboard() {
+  try {
+    const stats = await API.get('/api/super/stats');
+    document.getElementById('stats-grid').innerHTML = `
+      <div class="stat-card"><div class="stat-icon">🏪</div><div class="stat-value">${stats.totalRestaurants}</div><div class="stat-label">Total Restaurants</div></div>
+      <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-value">${stats.activeRestaurants}</div><div class="stat-label">Active</div></div>
+      <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-value">${stats.totalItems}</div><div class="stat-label">Total Menu Items</div></div>
+    `;
+    document.getElementById('rest-count').textContent = stats.totalRestaurants;
+    // Load recent restaurants
+    const rests = await API.get('/api/super/restaurants');
+    document.getElementById('dash-restaurants-preview').innerHTML = rests.slice(0, 5).map(r => `
+      <div class="menu-item">
+        <div class="mi-img">${r.logo_emoji || '🍽️'}</div>
+        <div class="mi-body">
+          <div class="mi-name">${r.name}</div>
+          <div class="mi-meta">
+            <span class="mi-cat">@${r.username}</span>
+            <span class="mi-cat">${r.item_count} items</span>
+          </div>
+        </div>
+        <span class="badge ${r.status === 'active' ? 'badge-success' : 'badge-error'}">${r.status}</span>
+      </div>
+    `).join('') || '<div class="empty-state"><div class="empty-state-icon">🏪</div><div class="empty-state-text">No restaurants yet</div></div>';
+  } catch(e) { showToast('Failed to load stats', true); }
+}
+
+// ─── Restaurants ─────────────────────────────
+async function loadRestaurants() {
+  try {
+    restaurants = await API.get('/api/super/restaurants');
+    renderRestaurants();
+  } catch(e) { showToast('Failed to load', true); }
+}
+
+document.getElementById('rest-search').oninput = () => renderRestaurants();
+
+function renderRestaurants() {
+  const q = document.getElementById('rest-search').value.toLowerCase();
+  const filtered = restaurants.filter(r => r.name.toLowerCase().includes(q) || r.username.toLowerCase().includes(q));
+  const list = document.getElementById('restaurants-list');
+  if (!filtered.length) { list.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔍</div><div class="empty-state-text">No restaurants found</div></div>'; return; }
+  list.innerHTML = filtered.map(r => `
+    <div class="order-card fade-in">
+      <div class="order-header">
+        <div><span style="font-size:1.3rem;margin-right:8px">${r.logo_emoji || '🍽️'}</span><span class="order-id" style="font-size:1.1rem">${r.name}</span></div>
+        <span class="badge ${r.status === 'active' ? 'badge-success' : 'badge-error'}">${r.status}</span>
+      </div>
+      <div class="order-items-list">
+        <div class="order-item-row"><span>Username</span><span>@${r.username}</span></div>
+        <div class="order-item-row"><span>Slug</span><span>${r.slug}</span></div>
+        <div class="order-item-row"><span>Address</span><span>${r.address || '-'}</span></div>
+        <div class="order-item-row"><span>Contact</span><span>${r.contact_info || '-'}</span></div>
+        <div class="order-item-row"><span>Menu Items</span><span>${r.item_count}</span></div>
+        <div class="order-item-row"><span>Created</span><span>${new Date(r.created_at).toLocaleDateString()}</span></div>
+      </div>
+      <div class="order-actions">
+        <button class="btn btn-sm btn-outline" onclick="copyRestaurantLink('${r.slug}')">Copy Link</button>
+        <button class="btn btn-sm btn-outline" onclick="viewRestaurantQR(${r.id}, '${r.slug}')">View QR</button>
+        ${r.status === 'active'
+          ? `<button class="btn btn-sm btn-danger" onclick="toggleStatus(${r.id},'suspended')">Suspend</button>`
+          : `<button class="btn btn-sm btn-success" onclick="toggleStatus(${r.id},'active')">Activate</button>`}
+        <button class="btn btn-sm btn-primary" onclick="editRestaurant(${r.id})">Edit</button>
+        <button class="btn btn-sm btn-secondary" onclick="deleteRestaurant(${r.id},'${r.name.replace(/'/g, "\\'")}')">Delete</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+window.copyRestaurantLink = (slug) => {
+  const url = location.origin + '/r/' + slug;
+  navigator.clipboard.writeText(url);
+  showToast('Link copied!');
+};
+
+window.viewRestaurantQR = async (id, slug) => {
+  try {
+    const response = await API.post('/api/super/restaurants/' + id + '/regenerate-qr', {});
+    const qrUrl = response.qr_url;
+    
+    // To ensure download works natively without CORS issues, construct object URL
+    const base64Response = await fetch(qrUrl + "?t=" + Date.now()); 
+    const blob = await base64Response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    
+    document.getElementById('sa-qr-img').src = objectUrl;
+    document.getElementById('sa-qr-download').href = objectUrl;
+    document.getElementById('sa-qr-download').download = slug + '-qr.png';
+    document.getElementById('modal-qr').classList.add('open');
+  } catch (e) {
+    showToast('Failed to load QR', true);
+  }
+};
+
+async function toggleStatus(id, status) {
+  try {
+    await API.patch('/api/super/restaurants/' + id + '/status', { status });
+    showToast(status === 'active' ? 'Restaurant activated' : 'Restaurant suspended');
+    loadRestaurants();
+    loadDashboard();
+  } catch(e) { showToast('Failed', true); }
+}
+
+async function deleteRestaurant(id, name) {
+  if (!confirm('Delete "' + name + '" and ALL its data? This cannot be undone.')) return;
+  try {
+    await API.del('/api/super/restaurants/' + id);
+    showToast('"' + name + '" deleted');
+    loadRestaurants();
+    loadDashboard();
+  } catch(e) { showToast('Failed', true); }
+}
+
+function closeModal(id) { document.getElementById('modal-' + id).classList.remove('open'); }
+function openRestModal() {
+  document.getElementById('form-rest').reset();
+  document.getElementById('mr-id').value = '';
+  document.getElementById('modal-title-rest').textContent = 'Add Restaurant';
+  document.getElementById('mr-pass').required = true;
+  document.getElementById('modal-rest').classList.add('open');
+}
+function editRestaurant(id) {
+  const r = restaurants.find(x => x.id === id);
+  document.getElementById('form-rest').reset();
+  document.getElementById('mr-id').value = r.id;
+  document.getElementById('mr-name').value = r.name;
+  document.getElementById('mr-user').value = r.username;
+  document.getElementById('mr-address').value = r.address || '';
+  document.getElementById('mr-contact').value = r.contact_info || '';
+  document.getElementById('modal-title-rest').textContent = 'Edit Restaurant';
+  document.getElementById('mr-pass').required = false;
+  document.getElementById('modal-rest').classList.add('open');
+}
+async function saveRestaurant() {
+  const payload = {
+    name: document.getElementById('mr-name').value,
+    username: document.getElementById('mr-user').value,
+    password: document.getElementById('mr-pass').value,
+    address: document.getElementById('mr-address').value,
+    contact_info: document.getElementById('mr-contact').value
+  };
+  const id = document.getElementById('mr-id').value;
+  try {
+    if (id) await API.patch('/api/super/restaurants/' + id, payload);
+    else await API.post('/api/super/restaurants', payload);
+    closeModal('rest');
+    showToast(id ? 'Updated successfully' : 'Minted new restaurant!');
+    loadRestaurants();
+    loadDashboard();
+  } catch(e) { showToast(e.message, true); }
+}
+
+// ─── Change password ─────────────────────────
+document.getElementById('btn-change-pass').onclick = async () => {
+  const c = document.getElementById('current-pass').value;
+  const n = document.getElementById('new-pass').value;
+  const cn = document.getElementById('confirm-pass').value;
+  if (!c || !n) return showToast('Fill all fields', true);
+  if (n !== cn) return showToast('Passwords don\'t match', true);
+  try {
+    await API.post('/api/super/change-password', { currentPassword: c, newPassword: n });
+    showToast('Password changed ✓');
+    ['current-pass','new-pass','confirm-pass'].forEach(id => document.getElementById(id).value = '');
+  } catch(e) { showToast(e.message, true); }
+};
+
+// ─── Toast ───────────────────────────────────
+let tt;
+function showToast(msg, err) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (err ? ' error' : '');
+  clearTimeout(tt);
+  tt = setTimeout(() => t.className = 'toast', 2500);
+}
+</script>
+</body>
+</html>
