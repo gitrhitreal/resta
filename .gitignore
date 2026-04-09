@@ -1,3 +1,8 @@
 node_modules/
 .env
 .cache/
+db/database.sqlite
+uploads/
+qr/
+_last_otp.txt
+*.txt.tmp

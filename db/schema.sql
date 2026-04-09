@@ -7,7 +7,21 @@ CREATE TABLE IF NOT EXISTS super_admins (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   username TEXT UNIQUE NOT NULL,
   password TEXT NOT NULL,
+  email TEXT DEFAULT '',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Two-factor authentication codes
+CREATE TABLE IF NOT EXISTS two_factor_codes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  admin_id INTEGER NOT NULL,
+  session_id TEXT UNIQUE NOT NULL,
+  code TEXT NOT NULL,
+  attempts INTEGER DEFAULT 0,
+  used INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  expires_at DATETIME NOT NULL,
+  FOREIGN KEY (admin_id) REFERENCES super_admins(id) ON DELETE CASCADE
 );
 
 -- Restaurants (tenants)

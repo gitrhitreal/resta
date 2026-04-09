@@ -4,8 +4,231 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Platform Admin — Restaurant SaaS</title>
+  <meta name="description" content="Secure super admin dashboard for managing restaurants on the SaaS platform"/>
   <link rel="stylesheet" href="css/common.css"/>
   <link rel="stylesheet" href="css/admin.css"/>
+  <style>
+    /* ═══ 2FA VERIFICATION SCREEN ═══ */
+    .tfa-screen {
+      display: none;
+      position: fixed; inset: 0;
+      background: var(--bg);
+      z-index: 100;
+      align-items: center; justify-content: center;
+    }
+    .tfa-screen.active { display: flex; }
+
+    .tfa-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 48px 40px;
+      max-width: 420px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 24px 64px rgba(0,0,0,.6);
+      animation: tfaSlideIn .5s ease;
+    }
+    @keyframes tfaSlideIn {
+      from { opacity: 0; transform: translateY(30px) scale(.96); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .tfa-icon {
+      width: 72px; height: 72px; margin: 0 auto 20px;
+      background: linear-gradient(135deg, var(--primary), var(--accent2));
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 32px;
+      box-shadow: 0 0 40px rgba(212,150,58,.3);
+      animation: tfaPulse 2s ease-in-out infinite;
+    }
+    @keyframes tfaPulse {
+      0%,100% { box-shadow: 0 0 40px rgba(212,150,58,.3); }
+      50% { box-shadow: 0 0 60px rgba(212,150,58,.5); }
+    }
+
+    .tfa-title {
+      font-family: var(--font-display);
+      font-size: 1.6rem; font-weight: 600;
+      margin-bottom: 8px; color: var(--text);
+    }
+    .tfa-subtitle {
+      font-size: .9rem; color: var(--dim);
+      margin-bottom: 28px; line-height: 1.5;
+    }
+    .tfa-email-highlight {
+      color: var(--accent); font-weight: 500;
+    }
+
+    /* OTP Input Group */
+    .otp-group {
+      display: flex; gap: 10px; justify-content: center;
+      margin-bottom: 24px;
+    }
+    .otp-input {
+      width: 52px; height: 62px;
+      background: var(--bg);
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      color: var(--accent);
+      font-family: 'Courier New', monospace;
+      font-size: 1.6rem; font-weight: 700;
+      text-align: center;
+      transition: all .2s ease;
+      caret-color: var(--primary);
+    }
+    .otp-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(212,150,58,.2);
+      background: var(--card2);
+    }
+    .otp-input.filled {
+      border-color: var(--accent2);
+      background: rgba(176,90,47,.08);
+    }
+    .otp-input.error-shake {
+      animation: otpShake .4s ease;
+      border-color: var(--error);
+    }
+    @keyframes otpShake {
+      0%,100% { transform: translateX(0); }
+      20% { transform: translateX(-6px); }
+      40% { transform: translateX(6px); }
+      60% { transform: translateX(-4px); }
+      80% { transform: translateX(4px); }
+    }
+
+    /* Timer */
+    .tfa-timer {
+      display: flex; align-items: center; justify-content: center;
+      gap: 8px; margin-bottom: 20px;
+      font-size: .85rem; color: var(--dim);
+    }
+    .tfa-timer-value {
+      color: var(--primary); font-weight: 600;
+      font-family: 'Courier New', monospace;
+      font-size: .95rem;
+    }
+    .tfa-timer.expired .tfa-timer-value { color: var(--error); }
+
+    /* Progress bar for timer */
+    .tfa-progress-wrap {
+      width: 100%; height: 3px;
+      background: var(--border);
+      border-radius: 4px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .tfa-progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      border-radius: 4px;
+      transition: width 1s linear;
+    }
+
+    .tfa-error {
+      color: var(--error);
+      font-size: .85rem;
+      min-height: 20px;
+      margin-bottom: 12px;
+      transition: opacity .2s;
+    }
+    .tfa-error:empty { opacity: 0; }
+
+    .tfa-actions {
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .tfa-resend {
+      background: none; border: none;
+      color: var(--dim); font-size: .85rem;
+      cursor: pointer; padding: 8px;
+      transition: color .2s;
+      font-family: var(--font-body);
+    }
+    .tfa-resend:hover:not(:disabled) { color: var(--primary); }
+    .tfa-resend:disabled { opacity: .4; cursor: not-allowed; }
+
+    .tfa-back {
+      background: none; border: none;
+      color: var(--dim); font-size: .8rem;
+      cursor: pointer; padding: 6px;
+      margin-top: 4px;
+      font-family: var(--font-body);
+      transition: color .2s;
+    }
+    .tfa-back:hover { color: var(--error); }
+
+    /* ═══ Settings 2FA Section ═══ */
+    .security-section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .security-header {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 16px;
+    }
+    .security-shield {
+      width: 40px; height: 40px;
+      background: linear-gradient(135deg, var(--primary), var(--accent2));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem;
+    }
+    .security-title { font-size: 1rem; font-weight: 600; }
+    .security-subtitle { font-size: .8rem; color: var(--dim); }
+    .security-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 12px; border-radius: 20px;
+      font-size: .75rem; font-weight: 600;
+      background: rgba(74,222,128,.1); color: var(--success);
+      margin-left: auto;
+    }
+    .security-email-display {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 18px;
+      display: flex; align-items: center; justify-content: space-between;
+      margin-top: 12px;
+    }
+    .security-email-label { font-size: .75rem; color: var(--dim); text-transform: uppercase; letter-spacing: .04em; }
+    .security-email-value { font-size: .95rem; color: var(--accent); margin-top: 2px; }
+
+    /* Verify button animated */
+    .btn-verify {
+      background: linear-gradient(135deg, var(--primary), var(--accent2));
+      color: #fff;
+      padding: 14px 32px;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: all .2s;
+      font-family: var(--font-body);
+      width: 100%;
+    }
+    .btn-verify:hover { filter: brightness(1.15); transform: translateY(-1px); }
+    .btn-verify:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+    .btn-verify.loading {
+      pointer-events: none;
+      position: relative;
+    }
+    .btn-verify.loading::after {
+      content: '';
+      position: absolute;
+      width: 20px; height: 20px;
+      border: 2px solid transparent;
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
 </head>
 <body>
 
@@ -20,13 +243,51 @@
       <div class="login-error" id="login-error">Invalid credentials</div>
       <div class="form-group">
         <label class="form-label">Username</label>
-        <input class="form-input" id="login-user" placeholder="superadmin" autocomplete="username"/>
+        <input class="form-input" id="login-user" placeholder="Enter username" autocomplete="username"/>
       </div>
       <div class="form-group">
         <label class="form-label">Password</label>
-        <input class="form-input" id="login-pass" type="password" placeholder="••••••" autocomplete="current-password"/>
+        <input class="form-input" id="login-pass" type="password" placeholder="••••••••••" autocomplete="current-password"/>
       </div>
       <button class="btn btn-primary login-btn" id="btn-login">Sign In →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ 2FA VERIFICATION ════ -->
+<div class="tfa-screen" id="tfa-screen">
+  <div class="tfa-card">
+    <div class="tfa-icon">🔐</div>
+    <div class="tfa-title">Verification Required</div>
+    <div class="tfa-subtitle">
+      We've sent a 6-digit code to<br>
+      <span class="tfa-email-highlight" id="tfa-email">r***w@gmail.com</span>
+    </div>
+
+    <div class="otp-group" id="otp-group">
+      <input class="otp-input" type="text" maxlength="1" inputmode="numeric" data-index="0" id="otp-0" autocomplete="one-time-code"/>
+      <input class="otp-input" type="text" maxlength="1" inputmode="numeric" data-index="1" id="otp-1"/>
+      <input class="otp-input" type="text" maxlength="1" inputmode="numeric" data-index="2" id="otp-2"/>
+      <input class="otp-input" type="text" maxlength="1" inputmode="numeric" data-index="3" id="otp-3"/>
+      <input class="otp-input" type="text" maxlength="1" inputmode="numeric" data-index="4" id="otp-4"/>
+      <input class="otp-input" type="text" maxlength="1" inputmode="numeric" data-index="5" id="otp-5"/>
+    </div>
+
+    <div class="tfa-progress-wrap">
+      <div class="tfa-progress-bar" id="tfa-progress"></div>
+    </div>
+
+    <div class="tfa-timer" id="tfa-timer">
+      <span>Code expires in</span>
+      <span class="tfa-timer-value" id="tfa-countdown">5:00</span>
+    </div>
+
+    <div class="tfa-error" id="tfa-error"></div>
+
+    <div class="tfa-actions">
+      <button class="btn-verify" id="btn-verify">Verify Code</button>
+      <button class="tfa-resend" id="btn-resend" disabled>Resend code in 30s</button>
+      <button class="tfa-back" id="btn-tfa-back">← Back to login</button>
     </div>
   </div>
 </div>
@@ -87,10 +348,39 @@
 
     <!-- Settings page -->
     <div class="content-area" id="page-settings" style="display:none">
+
+      <!-- 2FA Security Section -->
+      <div class="security-section">
+        <div class="security-header">
+          <div class="security-shield">🛡️</div>
+          <div>
+            <div class="security-title">Two-Factor Authentication</div>
+            <div class="security-subtitle">Email-based verification on every login</div>
+          </div>
+          <div class="security-badge">✓ Active</div>
+        </div>
+        <div class="security-email-display">
+          <div>
+            <div class="security-email-label">Verification Email</div>
+            <div class="security-email-value" id="settings-2fa-email">Loading...</div>
+          </div>
+          <button class="btn btn-sm btn-secondary" id="btn-change-email">Change</button>
+        </div>
+      </div>
+
+      <!-- Change Username Section -->
+      <div class="brand-section">
+        <div class="brand-section-title">👤 Change Username</div>
+        <div class="form-group"><label class="form-label">New Username</label><input class="form-input" id="new-username" type="text" placeholder="Enter new username"/></div>
+        <div class="form-group"><label class="form-label">Confirm with Password</label><input class="form-input" id="username-confirm-pass" type="password" placeholder="Enter your password"/></div>
+        <button class="btn btn-primary" id="btn-change-username">Update Username</button>
+      </div>
+
+      <!-- Change Password -->
       <div class="brand-section">
         <div class="brand-section-title">🔒 Change Password</div>
         <div class="form-group"><label class="form-label">Current Password</label><input class="form-input" id="current-pass" type="password"/></div>
-        <div class="form-group"><label class="form-label">New Password</label><input class="form-input" id="new-pass" type="password"/></div>
+        <div class="form-group"><label class="form-label">New Password (min 8 chars)</label><input class="form-input" id="new-pass" type="password"/></div>
         <div class="form-group"><label class="form-label">Confirm New Password</label><input class="form-input" id="confirm-pass" type="password"/></div>
         <button class="btn btn-primary" id="btn-change-pass">Change Password</button>
       </div>
@@ -125,6 +415,27 @@
   </form>
 </div>
 
+<!-- Email Change Modal -->
+<div class="modal-overlay" id="modal-email">
+  <div class="modal-content" style="max-width:420px">
+    <div class="modal-header">
+      <h3>Update 2FA Email</h3>
+      <button type="button" class="modal-close" onclick="closeModal('email')">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--dim); font-size:.9rem; margin-bottom:16px">Enter the email address where 2FA verification codes will be sent on each login.</p>
+      <div class="form-group">
+        <label class="form-label">New Email Address</label>
+        <input class="form-input" id="new-2fa-email" type="email" placeholder="your@email.com"/>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-secondary" onclick="closeModal('email')">Cancel</button>
+      <button class="btn btn-primary" id="btn-save-email">Save Email</button>
+    </div>
+  </div>
+</div>
+
 <!-- QR Modal -->
 <div class="modal-overlay" id="modal-qr">
   <div class="modal-content" style="text-align:center; padding: 40px; max-width: 400px; margin: 0 auto;">
@@ -146,21 +457,217 @@
 <script src="js/api.js"></script>
 <script>
 let restaurants = [];
+let tfaSessionId = null;
+let tfaTimerInterval = null;
+let tfaExpiryTime = null;
+let resendCooldown = null;
 
 // ─── Auth ─────────────────────────────────────
 document.getElementById('btn-login').onclick = async () => {
   const user = document.getElementById('login-user').value.trim();
   const pass = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('login-error');
+  errEl.classList.remove('show');
+
+  if (!user || !pass) {
+    errEl.textContent = 'Please enter username and password';
+    errEl.classList.add('show');
+    return;
+  }
+
   try {
     const data = await API.post('/api/auth/super-login', { username: user, password: pass });
-    API.setToken(data.token);
-    showApp();
+
+    if (data.requires2FA) {
+      // Show 2FA screen
+      tfaSessionId = data.sessionId;
+      document.getElementById('tfa-email').textContent = data.email;
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('tfa-screen').classList.add('active');
+      startTfaTimer();
+      startResendCooldown();
+      clearOtpInputs();
+      document.getElementById('otp-0').focus();
+    } else {
+      // Direct login (shouldn't happen with 2FA, but fallback)
+      API.setToken(data.token);
+      showApp();
+    }
   } catch (e) {
-    document.getElementById('login-error').classList.add('show');
+    errEl.textContent = e.message || 'Invalid credentials';
+    errEl.classList.add('show');
   }
 };
 document.getElementById('login-pass').onkeydown = e => { if (e.key === 'Enter') document.getElementById('btn-login').click(); };
+document.getElementById('login-user').onkeydown = e => { if (e.key === 'Enter') document.getElementById('btn-login').click(); };
 document.getElementById('btn-logout').onclick = () => { API.clearToken(); location.reload(); };
+
+// ─── 2FA OTP Input Logic ─────────────────────
+const otpInputs = document.querySelectorAll('.otp-input');
+
+otpInputs.forEach((input, idx) => {
+  input.addEventListener('input', (e) => {
+    const val = e.target.value.replace(/[^0-9]/g, '');
+    e.target.value = val;
+    if (val) {
+      e.target.classList.add('filled');
+      if (idx < 5) otpInputs[idx + 1].focus();
+    } else {
+      e.target.classList.remove('filled');
+    }
+    // Auto-submit when all 6 filled
+    if (getOtpValue().length === 6) {
+      setTimeout(() => document.getElementById('btn-verify').click(), 150);
+    }
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Backspace' && !e.target.value && idx > 0) {
+      otpInputs[idx - 1].focus();
+      otpInputs[idx - 1].value = '';
+      otpInputs[idx - 1].classList.remove('filled');
+    }
+  });
+
+  // Handle paste
+  input.addEventListener('paste', (e) => {
+    e.preventDefault();
+    const pasted = (e.clipboardData.getData('text') || '').replace(/[^0-9]/g, '').slice(0, 6);
+    pasted.split('').forEach((ch, i) => {
+      if (otpInputs[i]) {
+        otpInputs[i].value = ch;
+        otpInputs[i].classList.add('filled');
+      }
+    });
+    if (pasted.length > 0) otpInputs[Math.min(pasted.length, 5)].focus();
+    if (pasted.length === 6) {
+      setTimeout(() => document.getElementById('btn-verify').click(), 150);
+    }
+  });
+});
+
+function getOtpValue() {
+  return Array.from(otpInputs).map(i => i.value).join('');
+}
+
+function clearOtpInputs() {
+  otpInputs.forEach(i => { i.value = ''; i.classList.remove('filled', 'error-shake'); });
+  document.getElementById('tfa-error').textContent = '';
+}
+
+function shakeOtpInputs() {
+  otpInputs.forEach(i => {
+    i.classList.add('error-shake');
+    setTimeout(() => i.classList.remove('error-shake'), 500);
+  });
+}
+
+// ─── 2FA Timer ───────────────────────────────
+function startTfaTimer() {
+  tfaExpiryTime = Date.now() + 5 * 60 * 1000;
+  const totalDuration = 5 * 60 * 1000;
+
+  clearInterval(tfaTimerInterval);
+  tfaTimerInterval = setInterval(() => {
+    const remaining = Math.max(0, tfaExpiryTime - Date.now());
+    const mins = Math.floor(remaining / 60000);
+    const secs = Math.floor((remaining % 60000) / 1000);
+    document.getElementById('tfa-countdown').textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+
+    // Update progress bar
+    const pct = (remaining / totalDuration) * 100;
+    document.getElementById('tfa-progress').style.width = pct + '%';
+
+    const timerEl = document.getElementById('tfa-timer');
+    if (remaining <= 60000) timerEl.classList.add('expired');
+    else timerEl.classList.remove('expired');
+
+    if (remaining <= 0) {
+      clearInterval(tfaTimerInterval);
+      document.getElementById('tfa-countdown').textContent = 'Expired';
+      document.getElementById('tfa-error').textContent = 'Code expired. Please resend or go back.';
+    }
+  }, 1000);
+}
+
+function startResendCooldown() {
+  let secondsLeft = 30;
+  const btn = document.getElementById('btn-resend');
+  btn.disabled = true;
+  btn.textContent = `Resend code in ${secondsLeft}s`;
+
+  clearInterval(resendCooldown);
+  resendCooldown = setInterval(() => {
+    secondsLeft--;
+    if (secondsLeft <= 0) {
+      clearInterval(resendCooldown);
+      btn.disabled = false;
+      btn.textContent = 'Resend code';
+    } else {
+      btn.textContent = `Resend code in ${secondsLeft}s`;
+    }
+  }, 1000);
+}
+
+// ─── 2FA Verify ──────────────────────────────
+document.getElementById('btn-verify').onclick = async () => {
+  const code = getOtpValue();
+  if (code.length !== 6) {
+    document.getElementById('tfa-error').textContent = 'Please enter the full 6-digit code';
+    shakeOtpInputs();
+    return;
+  }
+
+  const btn = document.getElementById('btn-verify');
+  btn.classList.add('loading');
+  btn.textContent = '';
+  btn.disabled = true;
+
+  try {
+    const data = await API.post('/api/auth/super-login/verify-2fa', { sessionId: tfaSessionId, code });
+    API.setToken(data.token);
+    clearInterval(tfaTimerInterval);
+    clearInterval(resendCooldown);
+    document.getElementById('tfa-screen').classList.remove('active');
+    showApp();
+  } catch (e) {
+    document.getElementById('tfa-error').textContent = e.message;
+    shakeOtpInputs();
+    // Clear after shake animation finishes so user sees their wrong code shaking
+    setTimeout(() => {
+      clearOtpInputs();
+      otpInputs[0].focus();
+    }, 450);
+  } finally {
+    btn.classList.remove('loading');
+    btn.textContent = 'Verify Code';
+    btn.disabled = false;
+  }
+};
+
+// ─── 2FA Resend ──────────────────────────────
+document.getElementById('btn-resend').onclick = async () => {
+  try {
+    await API.post('/api/auth/super-login/resend-2fa', { sessionId: tfaSessionId });
+    clearOtpInputs();
+    startTfaTimer();
+    startResendCooldown();
+    document.getElementById('tfa-error').textContent = '';
+    otpInputs[0].focus();
+    showToast('New code sent!');
+  } catch (e) {
+    document.getElementById('tfa-error').textContent = e.message;
+  }
+};
+
+// ─── 2FA Back ────────────────────────────────
+document.getElementById('btn-tfa-back').onclick = () => {
+  clearInterval(tfaTimerInterval);
+  clearInterval(resendCooldown);
+  document.getElementById('tfa-screen').classList.remove('active');
+  document.getElementById('login-screen').style.display = '';
+  tfaSessionId = null;
+};
 
 // Check token
 if (API.getToken()) {
@@ -169,6 +676,7 @@ if (API.getToken()) {
 
 function showApp() {
   document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('tfa-screen').classList.remove('active');
   document.getElementById('admin-app').classList.add('active');
   loadDashboard();
 }
@@ -183,6 +691,7 @@ document.querySelectorAll('.nav-item[data-page]').forEach(item => {
     document.getElementById('page-title').textContent = item.querySelector('span:last-child')?.textContent?.trim() || item.textContent.trim();
     if (item.dataset.page === 'restaurants') loadRestaurants();
     if (item.dataset.page === 'dashboard') loadDashboard();
+    if (item.dataset.page === 'settings') loadSettings();
     closeSidebar();
   };
 });
@@ -216,6 +725,14 @@ async function loadDashboard() {
       </div>
     `).join('') || '<div class="empty-state"><div class="empty-state-icon">🏪</div><div class="empty-state-text">No restaurants yet</div></div>';
   } catch(e) { showToast('Failed to load stats', true); }
+}
+
+// ─── Settings ────────────────────────────────
+async function loadSettings() {
+  try {
+    const profile = await API.get('/api/super/profile');
+    document.getElementById('settings-2fa-email').textContent = profile.maskedEmail || 'Not set';
+  } catch(e) {}
 }
 
 // ─── Restaurants ─────────────────────────────
@@ -254,7 +771,7 @@ function renderRestaurants() {
           ? `<button class="btn btn-sm btn-danger" onclick="toggleStatus(${r.id},'suspended')">Suspend</button>`
           : `<button class="btn btn-sm btn-success" onclick="toggleStatus(${r.id},'active')">Activate</button>`}
         <button class="btn btn-sm btn-primary" onclick="editRestaurant(${r.id})">Edit</button>
-        <button class="btn btn-sm btn-secondary" onclick="deleteRestaurant(${r.id},'${r.name.replace(/'/g, "\\'")}')">Delete</button>
+        <button class="btn btn-sm btn-secondary" onclick="deleteRestaurant(${r.id},'${r.name.replace(/'/g, "\\\'")}')">Delete</button>
       </div>
     </div>
   `).join('');
@@ -271,7 +788,6 @@ window.viewRestaurantQR = async (id, slug) => {
     const response = await API.post('/api/super/restaurants/' + id + '/regenerate-qr', {});
     const qrUrl = response.qr_url;
     
-    // To ensure download works natively without CORS issues, construct object URL
     const base64Response = await fetch(qrUrl + "?t=" + Date.now()); 
     const blob = await base64Response.blob();
     const objectUrl = URL.createObjectURL(blob);
@@ -349,11 +865,44 @@ document.getElementById('btn-change-pass').onclick = async () => {
   const n = document.getElementById('new-pass').value;
   const cn = document.getElementById('confirm-pass').value;
   if (!c || !n) return showToast('Fill all fields', true);
+  if (n.length < 8) return showToast('New password must be at least 8 characters', true);
   if (n !== cn) return showToast('Passwords don\'t match', true);
   try {
     await API.post('/api/super/change-password', { currentPassword: c, newPassword: n });
     showToast('Password changed ✓');
     ['current-pass','new-pass','confirm-pass'].forEach(id => document.getElementById(id).value = '');
+  } catch(e) { showToast(e.message, true); }
+};
+
+// ─── Change username ─────────────────────────
+document.getElementById('btn-change-username').onclick = async () => {
+  const u = document.getElementById('new-username').value.trim();
+  const p = document.getElementById('username-confirm-pass').value;
+  if (!u || !p) return showToast('Fill all fields', true);
+  if (u.length < 4) return showToast('Username must be at least 4 characters', true);
+  try {
+    const data = await API.post('/api/super/change-username', { newUsername: u, password: p });
+    API.setToken(data.token);
+    showToast('Username changed to ' + data.username + ' ✓');
+    document.getElementById('new-username').value = '';
+    document.getElementById('username-confirm-pass').value = '';
+  } catch(e) { showToast(e.message, true); }
+};
+
+// ─── Change 2FA email ────────────────────────
+document.getElementById('btn-change-email').onclick = () => {
+  document.getElementById('new-2fa-email').value = '';
+  document.getElementById('modal-email').classList.add('open');
+};
+
+document.getElementById('btn-save-email').onclick = async () => {
+  const email = document.getElementById('new-2fa-email').value.trim();
+  if (!email || !email.includes('@')) return showToast('Enter a valid email', true);
+  try {
+    await API.post('/api/super/update-email', { email });
+    closeModal('email');
+    showToast('2FA email updated ✓');
+    loadSettings();
   } catch(e) { showToast(e.message, true); }
 };
 

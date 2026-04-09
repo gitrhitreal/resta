@@ -1,6 +1,7 @@
 /* ══════════════════════════════════════════════════════════════
    MULTI-RESTAURANT SAAS — Express Server
    ══════════════════════════════════════════════════════════════ */
+require('dotenv').config();
 const express = require('express');
 const Database = require('better-sqlite3');
 const bcrypt = require('bcryptjs');
@@ -11,11 +12,33 @@ const multer = require('multer');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'restaurant-saas-secret-' + Date.now();
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
+
+// ─── SMTP Configuration (Gmail) ─────────────────────────────
+const SMTP_HOST = process.env.SMTP_HOST || 'smtp.gmail.com';
+const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587');
+const SMTP_USER = process.env.SMTP_USER || '';
+const SMTP_PASS = process.env.SMTP_PASS || '';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'rhitwiksingh16@gmail.com';
+
+let mailTransporter = null;
+if (SMTP_USER && SMTP_PASS) {
+  mailTransporter = nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure: SMTP_PORT === 465,
+    auth: { user: SMTP_USER, pass: SMTP_PASS }
+  });
+  console.log('✦ Email transporter configured for 2FA');
+} else {
+  console.warn('⚠ SMTP credentials not set — 2FA codes will be printed to console only');
+}
 
 // ─── Middleware ──────────────────────────────────────────────
 app.use(cors());
@@ -49,14 +72,54 @@ db.pragma('foreign_keys = ON');
 const schema = fs.readFileSync(path.join(__dirname, 'db', 'schema.sql'), 'utf8');
 db.exec(schema);
 
-// Create default super admin (you)
-const SUPER_USER = 'superadmin';
-const SUPER_PASS = 'admin123';
-const existing = db.prepare('SELECT id FROM super_admins WHERE username = ?').get(SUPER_USER);
-if (!existing) {
-  const hashed = bcrypt.hashSync(SUPER_PASS, 10);
-  db.prepare('INSERT INTO super_admins (username, password) VALUES (?, ?)').run(SUPER_USER, hashed);
-  console.log(`✦ Super admin created: ${SUPER_USER} / ${SUPER_PASS}`);
+// ─── Ensure email column exists on super_admins ─────────────
+try { db.exec('ALTER TABLE super_admins ADD COLUMN email TEXT DEFAULT ""'); } catch(e) { /* column already exists */ }
+
+// ─── Generate strong, unpredictable super admin credentials ──
+function generateStrongPassword(length = 14) {
+  const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const lower = 'abcdefghjkmnpqrstuvwxyz';
+  const digits = '23456789';
+  const symbols = '#$@!%&*?';
+  const all = upper + lower + digits + symbols;
+  // Guarantee at least one of each class
+  let pw = '';
+  pw += upper[crypto.randomInt(upper.length)];
+  pw += lower[crypto.randomInt(lower.length)];
+  pw += digits[crypto.randomInt(digits.length)];
+  pw += symbols[crypto.randomInt(symbols.length)];
+  for (let i = pw.length; i < length; i++) pw += all[crypto.randomInt(all.length)];
+  // Shuffle
+  return pw.split('').sort(() => crypto.randomInt(3) - 1).join('');
+}
+
+function generateUsername() {
+  const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
+  let u = 'sa_';
+  for (let i = 0; i < 8; i++) u += chars[crypto.randomInt(chars.length)];
+  return u;
+}
+
+const existingAdmin = db.prepare('SELECT id FROM super_admins LIMIT 1').get();
+if (!existingAdmin) {
+  const SUPER_USER = generateUsername();
+  const SUPER_PASS = generateStrongPassword(14);
+  const hashed = bcrypt.hashSync(SUPER_PASS, 12);
+  db.prepare('INSERT INTO super_admins (username, password, email) VALUES (?, ?, ?)').run(SUPER_USER, hashed, ADMIN_EMAIL);
+  console.log('\n  ╔══════════════════════════════════════════════════════════╗');
+  console.log('  ║   🔐  SUPER ADMIN CREDENTIALS (SAVE THESE NOW!)        ║');
+  console.log('  ╠══════════════════════════════════════════════════════════╣');
+  console.log(`  ║   Username: ${SUPER_USER.padEnd(42)}║`);
+  console.log(`  ║   Password: ${SUPER_PASS.padEnd(42)}║`);
+  console.log(`  ║   2FA Email: ${ADMIN_EMAIL.padEnd(41)}║`);
+  console.log('  ╚══════════════════════════════════════════════════════════╝\n');
+} else {
+  // Ensure email is set on existing admin
+  const admin = db.prepare('SELECT id, email, username FROM super_admins LIMIT 1').get();
+  if (!admin.email) {
+    db.prepare('UPDATE super_admins SET email = ? WHERE id = ?').run(ADMIN_EMAIL, admin.id);
+  }
+  console.log(`✦ Super admin loaded: ${admin.username}`);
 }
 
 // Ensure QR directory
@@ -87,17 +150,188 @@ function requireRestaurant(req, res, next) {
 }
 
 // ═══════════════════════════════════════════════════════════
+// 2FA EMAIL HELPER
+// ═══════════════════════════════════════════════════════════
+
+function generateOTP() {
+  return crypto.randomInt(100000, 999999).toString();
+}
+
+async function sendOTPEmail(email, code) {
+  if (!mailTransporter) {
+    console.log(`[2FA] Code: ${code}`);
+    return true;
+  }
+  try {
+    await mailTransporter.sendMail({
+      from: `"Restaurant SaaS" <${SMTP_USER}>`,
+      to: email,
+      subject: '🔐 Your Login Verification Code',
+      html: `
+        <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:480px;margin:0 auto;background:#0c0a08;border-radius:16px;overflow:hidden;border:1px solid #2a2520">
+          <div style="background:linear-gradient(135deg,#D4963A,#B05A2F);padding:32px 24px;text-align:center">
+            <div style="font-size:36px;margin-bottom:8px">⚡</div>
+            <h1 style="color:#fff;margin:0;font-size:22px;font-weight:600">Restaurant SaaS</h1>
+            <p style="color:rgba(255,255,255,0.8);margin:4px 0 0;font-size:14px">Platform Admin Verification</p>
+          </div>
+          <div style="padding:32px 24px;text-align:center">
+            <p style="color:#a89880;font-size:15px;margin:0 0 24px">Enter this code to complete your sign-in:</p>
+            <div style="background:#1a1612;border:2px solid #D4963A;border-radius:12px;padding:20px;display:inline-block;margin-bottom:24px">
+              <span style="font-size:36px;font-weight:700;letter-spacing:12px;color:#E8C87A;font-family:'Courier New',monospace">${code}</span>
+            </div>
+            <p style="color:#6b5e50;font-size:13px;margin:0">This code expires in <strong style="color:#D4963A">5 minutes</strong></p>
+            <p style="color:#4a3f35;font-size:12px;margin:16px 0 0">If you didn't request this, ignore this email.</p>
+          </div>
+        </div>
+      `
+    });
+    return true;
+  } catch (err) {
+    console.error('Email send failed:', err.message);
+    // Fallback: print to console
+    console.log(`\n  ╔════════════════════════════════╗`);
+    console.log(`  ║  🔑 2FA CODE: ${code}            ║`);
+    console.log(`  ╚════════════════════════════════╝\n`);
+    return true;
+  }
+}
+
+// Cleanup expired 2FA codes periodically
+setInterval(() => {
+  try {
+    db.prepare("DELETE FROM two_factor_codes WHERE expires_at < ?").run(Date.now());
+  } catch(e) { /* ignore cleanup errors */ }
+}, 60000);
+
+// ─── Basic rate limiter for login ────────────────────────────
+const loginAttempts = new Map();
+function checkRateLimit(ip) {
+  const now = Date.now();
+  const record = loginAttempts.get(ip);
+  if (!record) {
+    loginAttempts.set(ip, { count: 1, firstAttempt: now });
+    return true;
+  }
+  // Reset window after 15 minutes
+  if (now - record.firstAttempt > 15 * 60 * 1000) {
+    loginAttempts.set(ip, { count: 1, firstAttempt: now });
+    return true;
+  }
+  record.count++;
+  if (record.count > 10) return false; // Max 10 attempts per 15min
+  return true;
+}
+// Cleanup rate limit map periodically
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, record] of loginAttempts) {
+    if (now - record.firstAttempt > 15 * 60 * 1000) loginAttempts.delete(ip);
+  }
+}, 60000);
+
+// ═══════════════════════════════════════════════════════════
 // AUTH ROUTES
 // ═══════════════════════════════════════════════════════════
 
-// Super admin login
-app.post('/api/auth/super-login', (req, res) => {
+// Super admin login — Step 1: Verify password, send OTP
+app.post('/api/auth/super-login', async (req, res) => {
+  const clientIp = req.ip || req.connection?.remoteAddress || 'unknown';
+  if (!checkRateLimit(clientIp)) {
+    return res.status(429).json({ error: 'Too many login attempts. Please try again in 15 minutes.' });
+  }
+
   const { username, password } = req.body;
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Username and password required' });
+  }
+
   const admin = db.prepare('SELECT * FROM super_admins WHERE username = ?').get(username);
   if (!admin || !bcrypt.compareSync(password, admin.password))
     return res.status(401).json({ error: 'Invalid credentials' });
-  const token = signToken({ id: admin.id, role: 'super', username });
-  res.json({ token, username });
+
+  // Generate OTP and session
+  const code = generateOTP();
+  const sessionId = uuid();
+  const expiresAt = Date.now() + 5 * 60 * 1000; // epoch ms for reliable comparison
+
+  // Hash the OTP code before storing
+  const hashedCode = bcrypt.hashSync(code, 8);
+
+  // Clean old codes for this admin
+  db.prepare('DELETE FROM two_factor_codes WHERE admin_id = ?').run(admin.id);
+  // Insert new code (hashed)
+  db.prepare('INSERT INTO two_factor_codes (admin_id, session_id, code, expires_at) VALUES (?, ?, ?, ?)')
+    .run(admin.id, sessionId, hashedCode, expiresAt);
+
+  // Send email (with plaintext code)
+  const email = admin.email || ADMIN_EMAIL;
+  await sendOTPEmail(email, code);
+
+  // Mask email for frontend display
+  const maskedEmail = email.replace(/^(.{2})(.*)(@.*)$/, (m, a, b, c) => a + '*'.repeat(b.length) + c);
+
+  res.json({ requires2FA: true, sessionId, email: maskedEmail });
+});
+
+// Super admin login — Step 2: Verify OTP code
+app.post('/api/auth/super-login/verify-2fa', (req, res) => {
+  const { sessionId, code } = req.body;
+  if (!sessionId || !code) return res.status(400).json({ error: 'Session ID and code required' });
+
+  const record = db.prepare('SELECT * FROM two_factor_codes WHERE session_id = ?').get(sessionId);
+  if (!record) return res.status(401).json({ error: 'Invalid or expired session' });
+
+  // Check expiry (epoch ms comparison — reliable)
+  if (Number(record.expires_at) < Date.now()) {
+    db.prepare('DELETE FROM two_factor_codes WHERE id = ?').run(record.id);
+    return res.status(401).json({ error: 'Code expired. Please login again.' });
+  }
+
+  // Check used
+  if (record.used) return res.status(401).json({ error: 'Code already used' });
+
+  // Check attempts
+  if (record.attempts >= 5) {
+    db.prepare('DELETE FROM two_factor_codes WHERE id = ?').run(record.id);
+    return res.status(429).json({ error: 'Too many attempts. Please login again.' });
+  }
+
+  // Validate code (compare against hashed OTP)
+  const trimmedCode = code.trim();
+  if (!bcrypt.compareSync(trimmedCode, record.code)) {
+    db.prepare('UPDATE two_factor_codes SET attempts = attempts + 1 WHERE id = ?').run(record.id);
+    const remaining = 5 - (record.attempts + 1);
+    return res.status(401).json({ error: `Invalid code. ${remaining} attempt${remaining !== 1 ? 's' : ''} remaining.` });
+  }
+
+  // Mark as used and delete (one-time use)
+  db.prepare('DELETE FROM two_factor_codes WHERE id = ?').run(record.id);
+
+  // Get admin and issue token
+  const admin = db.prepare('SELECT * FROM super_admins WHERE id = ?').get(record.admin_id);
+  const token = signToken({ id: admin.id, role: 'super', username: admin.username });
+  res.json({ token, username: admin.username });
+});
+
+// Resend 2FA code
+app.post('/api/auth/super-login/resend-2fa', async (req, res) => {
+  const { sessionId } = req.body;
+  if (!sessionId) return res.status(400).json({ error: 'Session ID required' });
+
+  const record = db.prepare('SELECT * FROM two_factor_codes WHERE session_id = ?').get(sessionId);
+  if (!record) return res.status(401).json({ error: 'Invalid session' });
+
+  // Generate new code, reset attempts
+  const code = generateOTP();
+  const expiresAt = Date.now() + 5 * 60 * 1000; // epoch ms
+  const hashedCode = bcrypt.hashSync(code, 8);
+  db.prepare('UPDATE two_factor_codes SET code = ?, attempts = 0, used = 0, expires_at = ? WHERE id = ?')
+    .run(hashedCode, expiresAt, record.id);
+
+  const admin = db.prepare('SELECT email FROM super_admins WHERE id = ?').get(record.admin_id);
+  await sendOTPEmail(admin.email || ADMIN_EMAIL, code);
+
+  res.json({ success: true, message: 'New code sent' });
 });
 
 // Restaurant registration
@@ -241,12 +475,46 @@ app.post('/api/super/restaurants/:id/regenerate-qr', verifyToken, requireSuper, 
 // Change super admin password
 app.post('/api/super/change-password', verifyToken, requireSuper, (req, res) => {
   const { currentPassword, newPassword } = req.body;
+  if (!newPassword || newPassword.length < 8)
+    return res.status(400).json({ error: 'New password must be at least 8 characters' });
   const admin = db.prepare('SELECT * FROM super_admins WHERE id = ?').get(req.user.id);
   if (!bcrypt.compareSync(currentPassword, admin.password))
     return res.status(401).json({ error: 'Current password incorrect' });
-  const hashed = bcrypt.hashSync(newPassword, 10);
+  const hashed = bcrypt.hashSync(newPassword, 12);
   db.prepare('UPDATE super_admins SET password = ? WHERE id = ?').run(hashed, req.user.id);
   res.json({ success: true });
+});
+
+// Update 2FA email
+app.post('/api/super/update-email', verifyToken, requireSuper, (req, res) => {
+  const { email } = req.body;
+  if (!email || !email.includes('@')) return res.status(400).json({ error: 'Valid email required' });
+  db.prepare('UPDATE super_admins SET email = ? WHERE id = ?').run(email, req.user.id);
+  res.json({ success: true });
+});
+
+// Get super admin profile info
+app.get('/api/super/profile', verifyToken, requireSuper, (req, res) => {
+  const admin = db.prepare('SELECT username, email FROM super_admins WHERE id = ?').get(req.user.id);
+  const maskedEmail = admin.email ? admin.email.replace(/^(.{2})(.*)(@.*)$/, (m, a, b, c) => a + '*'.repeat(b.length) + c) : '';
+  res.json({ username: admin.username, email: admin.email, maskedEmail });
+});
+
+// Change super admin username
+app.post('/api/super/change-username', verifyToken, requireSuper, (req, res) => {
+  const { newUsername, password } = req.body;
+  if (!newUsername || newUsername.length < 4)
+    return res.status(400).json({ error: 'Username must be at least 4 characters' });
+  const admin = db.prepare('SELECT * FROM super_admins WHERE id = ?').get(req.user.id);
+  if (!bcrypt.compareSync(password, admin.password))
+    return res.status(401).json({ error: 'Password incorrect' });
+  try {
+    db.prepare('UPDATE super_admins SET username = ? WHERE id = ?').run(newUsername, req.user.id);
+    const token = signToken({ id: admin.id, role: 'super', username: newUsername });
+    res.json({ success: true, token, username: newUsername });
+  } catch(e) {
+    res.status(400).json({ error: 'Username already taken' });
+  }
 });
 
 // ═══════════════════════════════════════════════════════════
