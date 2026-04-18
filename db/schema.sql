@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS restaurants (
   name TEXT NOT NULL,
   tagline TEXT DEFAULT '',
   kicker TEXT DEFAULT 'Fine Dining Experience',
-  currency TEXT DEFAULT '£',
+  currency TEXT DEFAULT '₹',
   logo_emoji TEXT DEFAULT '🪔',
   logo_image TEXT DEFAULT '',
   address TEXT DEFAULT '',

@@ -7,11 +7,7 @@ let CATEGORIES = [];
 let MENU = [];
 let BUTTONS = [];
 
-function escapeHTML(str) {
-  if (!str) return '';
-  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
-
+const escapeHTML = API.escape;
 
 // ─── Boot & Auth ──────────────────────────────────────────────
 async function init() {
@@ -262,7 +258,7 @@ function renderMenu() {
       <div class="mi-body">
         <div class="mi-name">${escapeHTML(i.name)}</div>
         <div class="mi-meta">
-          <span class="mi-price">${RESTAURANT.currency || '£'}${i.price.toFixed(2)}</span>
+          <span class="mi-price">${RESTAURANT.currency || '₹'}${(i.price || 0).toFixed(2)}</span>
           <span class="mi-cat">${escapeHTML(i.category)}</span>
           ${!i.available ? `<span class="badge badge-error">Out of Stock</span>` : ''}
         </div>
@@ -414,9 +410,9 @@ async function loadButtons() {
     const list = document.getElementById('hb-list');
     list.innerHTML = BUTTONS.map((b, i) => `
       <div class="hb-item" data-id="${b.id}">
-        <div class="hb-icon">${b.icon}</div>
-        <div class="hb-label">${b.label}</div>
-        <div class="hb-action">${b.action}</div>
+        <div class="hb-icon">${escapeHTML(b.icon)}</div>
+        <div class="hb-label">${escapeHTML(b.label)}</div>
+        <div class="hb-action">${escapeHTML(b.action)}</div>
         <div class="mi-actions">
           <button class="btn-icon" onclick="editHb(${b.id})">✏️</button>
           <button class="btn-icon danger" onclick="deleteHb(${b.id})">🗑️</button>
@@ -477,12 +473,12 @@ async function loadBranding() {
   document.getElementById('b-name').value = RESTAURANT.name;
   document.getElementById('b-tag').value = RESTAURANT.tagline || '';
   document.getElementById('b-kicker').value = RESTAURANT.kicker || 'Fine Dining Experience';
-  document.getElementById('b-curr').value = RESTAURANT.currency || '£';
+  document.getElementById('b-curr').value = RESTAURANT.currency || '₹';
   
   if (RESTAURANT.logo_image) {
-    document.getElementById('logo-preview').innerHTML = `<img src="${RESTAURANT.logo_image}?t=${Date.now()}"/>`;
+    document.getElementById('logo-preview').innerHTML = `<img src="${escapeHTML(RESTAURANT.logo_image)}?t=${Date.now()}"/>`;
   } else {
-    document.getElementById('logo-preview').innerHTML = RESTAURANT.logo_emoji || '🪔';
+    document.getElementById('logo-preview').textContent = RESTAURANT.logo_emoji || '🪔';
     document.getElementById('b-emoji').value = RESTAURANT.logo_emoji || '🪔';
   }
 
@@ -528,7 +524,7 @@ window.saveBranding = async () => {
   });
 });
 
-window.setEmoji = e => { document.getElementById('b-emoji').value = e; document.getElementById('logo-preview').innerHTML = e; };
+window.setEmoji = e => { document.getElementById('b-emoji').value = e; document.getElementById('logo-preview').textContent = e; };
 
 // File upload
 document.getElementById('logo-drop').onclick = () => document.getElementById('logo-input').click();
@@ -537,7 +533,7 @@ document.getElementById('logo-input').onchange = async e => {
   if(!file) return;
   try {
     const data = await API.upload('/api/restaurant/logo', file);
-    document.getElementById('logo-preview').innerHTML = `<img src="${data.logo_image}?t=${Date.now()}"/>`;
+    document.getElementById('logo-preview').innerHTML = `<img src="${escapeHTML(data.logo_image)}?t=${Date.now()}"/>`;
     RESTAURANT.logo_image = data.logo_image;
     showToast('Logo uploaded ✓');
   } catch(err) { showToast('Upload failed', true); }

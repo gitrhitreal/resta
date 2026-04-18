@@ -18,8 +18,18 @@ const API = (() => {
     return data;
   }
 
+  function escape(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   return {
-    getToken, setToken, clearToken,
+    getToken, setToken, clearToken, escape,
     get: (url) => request(url),
     post: (url, body) => request(url, { method: 'POST', body: JSON.stringify(body) }),
     put: (url, body) => request(url, { method: 'PUT', body: JSON.stringify(body) }),

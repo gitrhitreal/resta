@@ -8,6 +8,8 @@ let CATEGORIES = [];
 let BUTTONS = [];
 let QUIZ = [];
 
+const escapeHTML = API.escape;
+
 // Parse URL: /r/slug
 const pathParts = window.location.pathname.split('/');
 const SLUG = pathParts[pathParts.length - 1]; // get 'slug' from /r/slug
@@ -34,7 +36,7 @@ async function init() {
     
     setupUI();
   } catch (e) {
-    document.body.innerHTML = `<div style="text-align:center;padding:50px;font-family:sans-serif"><h1>Oops!</h1><p>${e.message}</p></div>`;
+    document.body.innerHTML = `<div style="text-align:center;padding:50px;font-family:sans-serif"><h1>Oops!</h1><p>${escapeHTML(e.message)}</p></div>`;
   }
 }
 
@@ -54,7 +56,7 @@ function setupUI() {
   document.getElementById('h-tag').textContent = RESTAURANT.tagline || '';
   
   if (RESTAURANT.logo_image) {
-    document.getElementById('h-logo').innerHTML = `<img src="${RESTAURANT.logo_image}"/>`;
+    document.getElementById('h-logo').innerHTML = `<img src="${escapeHTML(RESTAURANT.logo_image)}"/>`;
   } else {
     document.getElementById('h-logo').textContent = RESTAURANT.logo_emoji || '🍽️';
   }
@@ -89,7 +91,7 @@ function renderMenu() {
     return;
   }
 
-  document.getElementById('menu-cat-filters').innerHTML = cats.map((c, idx) => `<button class="filter-pill ${idx===0?'active':''}" onclick="filterCat(${idx}, this)">${c}</button>`).join('');
+  document.getElementById('menu-cat-filters').innerHTML = cats.map((c, idx) => `<button class="filter-pill ${idx===0?'active':''}" onclick="filterCat(${idx}, this)">${escapeHTML(c)}</button>`).join('');
   
   const list = document.getElementById('menu-list');
   list.innerHTML = ''; // Ensure list is cleared before rendering
@@ -98,15 +100,15 @@ function renderMenu() {
     const items = MENU.filter(i => i.category === c);
     const html = `
       <div class="menu-group" id="cat-group-${idx}" style="${idx===0 ? '' : 'display:none'}">
-        <h2 class="cat-title">${c}</h2>
+        <h2 class="cat-title">${escapeHTML(c)}</h2>
         ${items.map(i => `
           <div class="dish-card">
-            <div class="dish-img">${i.img.length < 5 ? i.img : `<img src="${i.img}"/>`}</div>
+            <div class="dish-img">${i.img.length < 5 ? i.img : `<img src="${escapeHTML(i.img)}"/>`}</div>
             <div class="dish-body">
-              <div class="dish-header"><div class="dish-name">${i.name}</div><div class="dish-price">${RESTAURANT.currency}${i.price.toFixed(2)}</div></div>
-              ${i.description ? `<div class="dish-desc">${i.description}</div>` : ''}
+              <div class="dish-header"><div class="dish-name">${escapeHTML(i.name)}</div><div class="dish-price">${RESTAURANT.currency}${i.price.toFixed(2)}</div></div>
+              ${i.description ? `<div class="dish-desc">${escapeHTML(i.description)}</div>` : ''}
               <div class="dish-meta">
-                ${i.diet !== 'meat' ? `<span class="badge badge-dim">${i.diet}</span>` : ''}
+                ${i.diet !== 'meat' ? `<span class="badge badge-dim">${escapeHTML(i.diet)}</span>` : ''}
                 ${!i.available ? `<span class="badge badge-error">Sold Out</span>` : ''}
               </div>
             </div>
@@ -136,7 +138,7 @@ function renderPicker() {
     // try find an item emoji
     const item = MENU.find(i => i.category === c && i.img.length < 5);
     const emoji = item ? item.img : '🍽️';
-    return `<div class="picker-card" onclick="surpriseMatch('${c}')"><div class="picker-emoji">${emoji}</div><div class="picker-label">${c}</div></div>`;
+    return `<div class="picker-card" onclick="surpriseMatch('${escapeHTML(c)}')"><div class="picker-emoji">${emoji.length < 5 ? emoji : '✨'}</div><div class="picker-label">${escapeHTML(c)}</div></div>`;
   }).join('');
 }
 
@@ -151,7 +153,7 @@ window.surpriseMatch = (cat) => {
   res.innerHTML = `
     <div class="match-card">
       <div style="font-size:4rem; margin-bottom:12px;">${winner.img.length < 5 ? winner.img : '✨'}</div>
-      <h3 style="font-family:var(--font-display); font-size:1.8rem; margin-bottom:8px">${winner.name}</h3>
+      <h3 style="font-family:var(--font-display); font-size:1.8rem; margin-bottom:8px">${escapeHTML(winner.name)}</h3>
       <div style="color:var(--primary); font-weight:600; font-size:1.2rem; margin-bottom:24px">${RESTAURANT.currency}${winner.price.toFixed(2)}</div>
       <button class="btn btn-primary" style="width:100%" onclick="navigate('browse')">View on Menu</button>
     </div>
@@ -294,7 +296,7 @@ function renderQuiz() {
   const q = QUIZ_TREE[currentQNode];
   qTitle.textContent = q.question;
   qOpts.innerHTML = q.answers.map((a, idx) => `
-    <div class="qz-btn" onclick="answerQ(${idx})">${a.text}</div>
+    <div class="qz-btn" onclick="answerQ(${idx})">${escapeHTML(a.text)}</div>
   `).join('');
 }
 
@@ -373,8 +375,8 @@ function endQuiz() {
         <div class="match-card" style="padding: 16px; text-align:left; display:flex; gap:16px; align-items:center; margin-top:0;">
           <div style="font-size:3rem; flex-shrink:0;">${winner.img.length < 5 ? winner.img : '✨'}</div>
           <div>
-            <div style="font-size:.8rem; color:var(--primary); font-weight:bold; letter-spacing:1px; text-transform:uppercase; margin-bottom:4px;">${winner.category}</div>
-            <h3 style="font-family:var(--font-display); font-size:1.4rem; margin-bottom:4px">${winner.name}</h3>
+            <div style="font-size:.8rem; color:var(--primary); font-weight:bold; letter-spacing:1px; text-transform:uppercase; margin-bottom:4px;">${escapeHTML(winner.category)}</div>
+            <h3 style="font-family:var(--font-display); font-size:1.4rem; margin-bottom:4px">${escapeHTML(winner.name)}</h3>
             <div style="color:var(--dim); font-weight:600; font-size:1.1rem;">${RESTAURANT.currency}${winner.price.toFixed(2)}</div>
           </div>
         </div>

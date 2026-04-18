@@ -16,9 +16,13 @@ const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 
 const app = express();
+
+// Trust reverse proxy (essential for proper IP tracking and rate limiting on hosts like Render/Heroku)
+app.set('trust proxy', 1);
+
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'restaurant-saas-secret-' + Date.now();
-const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
+const BASE_URL = process.env.RENDER_EXTERNAL_URL || process.env.BASE_URL || `http://localhost:${PORT}`;
 
 // ─── SMTP Configuration (Gmail) ─────────────────────────────
 const SMTP_HOST = process.env.SMTP_HOST || 'smtp.gmail.com';
@@ -29,13 +33,30 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'rhitwiksingh16@gmail.com';
 
 let mailTransporter = null;
 if (SMTP_USER && SMTP_PASS) {
-  mailTransporter = nodemailer.createTransport({
+  const mailConfig = {
     host: SMTP_HOST,
     port: SMTP_PORT,
     secure: SMTP_PORT === 465,
-    auth: { user: SMTP_USER, pass: SMTP_PASS }
+    auth: { user: SMTP_USER, pass: SMTP_PASS },
+    connectionTimeout: 6000,
+    greetingTimeout: 6000,
+    socketTimeout: 6000,
+    tls: {
+      rejectUnauthorized: false
+    }
+  };
+
+  if (SMTP_HOST.includes('gmail')) {
+    mailConfig.service = 'gmail';
+  }
+
+  mailTransporter = nodemailer.createTransport(mailConfig);
+  
+  mailTransporter.verify().then(() => {
+    console.log('✦ Email transporter configured and verified for 2FA');
+  }).catch(err => {
+    console.warn('⚠ Email transporter verification failed:', err.message);
   });
-  console.log('✦ Email transporter configured for 2FA');
 } else {
   console.warn('⚠ SMTP credentials not set — 2FA codes will be printed to console only');
 }
@@ -55,10 +76,21 @@ const upload = multer({
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
       cb(null, dir);
     },
-    filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase();
+      cb(null, Date.now() + '-' + crypto.randomUUID() + ext);
+    }
   }),
   limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => cb(null, file.mimetype.startsWith('image/'))
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const safeExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
+    if (file.mimetype.startsWith('image/') && safeExts.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid image file type'));
+    }
+  }
 });
 
 // ─── Database ───────────────────────────────────────────────
@@ -73,7 +105,7 @@ const schema = fs.readFileSync(path.join(__dirname, 'db', 'schema.sql'), 'utf8')
 db.exec(schema);
 
 // ─── Ensure email column exists on super_admins ─────────────
-try { db.exec('ALTER TABLE super_admins ADD COLUMN email TEXT DEFAULT ""'); } catch(e) { /* column already exists */ }
+try { db.exec('ALTER TABLE super_admins ADD COLUMN email TEXT DEFAULT ""'); } catch (e) { /* column already exists */ }
 
 // ─── Generate strong, unpredictable super admin credentials ──
 function generateStrongPassword(length = 14) {
@@ -200,7 +232,7 @@ async function sendOTPEmail(email, code) {
 setInterval(() => {
   try {
     db.prepare("DELETE FROM two_factor_codes WHERE expires_at < ?").run(Date.now());
-  } catch(e) { /* ignore cleanup errors */ }
+  } catch (e) { /* ignore cleanup errors */ }
 }, 60000);
 
 // ─── Basic rate limiter for login ────────────────────────────
@@ -336,6 +368,11 @@ app.post('/api/auth/super-login/resend-2fa', async (req, res) => {
 
 // Restaurant registration
 app.post('/api/auth/register', (req, res) => {
+  const clientIp = req.ip || req.connection?.remoteAddress || 'unknown';
+  if (!checkRateLimit(clientIp)) {
+    return res.status(429).json({ error: 'Too many attempts. Please try again later.' });
+  }
+
   const { username, password, name } = req.body;
   if (!username || !password || !name)
     return res.status(400).json({ error: 'Username, password and restaurant name required' });
@@ -372,6 +409,11 @@ app.post('/api/auth/register', (req, res) => {
 
 // Restaurant login
 app.post('/api/auth/restaurant-login', (req, res) => {
+  const clientIp = req.ip || req.connection?.remoteAddress || 'unknown';
+  if (!checkRateLimit(clientIp)) {
+    return res.status(429).json({ error: 'Too many login attempts. Please try again later.' });
+  }
+
   const { username, password } = req.body;
   const rest = db.prepare('SELECT * FROM restaurants WHERE username = ?').get(username);
   if (!rest || !bcrypt.compareSync(password, rest.password))
@@ -432,15 +474,15 @@ app.patch('/api/super/restaurants/:id', verifyToken, requireSuper, async (req, r
 app.post('/api/super/restaurants', verifyToken, requireSuper, async (req, res) => {
   const { name, username, password, address, contact_info } = req.body;
   if (!name || !username || !password) return res.status(400).json({ error: 'Name, username, password required' });
-  
+
   const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   const hashed = bcrypt.hashSync(password, 10);
-  
+
   try {
     db.prepare('INSERT INTO restaurants (slug, username, password, name, address, contact_info) VALUES (?, ?, ?, ?, ?, ?)')
       .run(slug, username, hashed, name, address || '', contact_info || '');
     res.json({ success: true });
-  } catch(e) {
+  } catch (e) {
     if (e.message.includes('UNIQUE constraint failed')) {
       return res.status(400).json({ error: 'Username or basic slug already exists. Try a different name/login ID' });
     }
@@ -512,7 +554,7 @@ app.post('/api/super/change-username', verifyToken, requireSuper, (req, res) => 
     db.prepare('UPDATE super_admins SET username = ? WHERE id = ?').run(newUsername, req.user.id);
     const token = signToken({ id: admin.id, role: 'super', username: newUsername });
     res.json({ success: true, token, username: newUsername });
-  } catch(e) {
+  } catch (e) {
     res.status(400).json({ error: 'Username already taken' });
   }
 });
@@ -717,7 +759,7 @@ app.get('/api/public/restaurant/:slug/menu', (req, res) => {
   if (!rest) return res.status(404).json({ error: 'Restaurant not found' });
   const items = db.prepare('SELECT * FROM menu_items WHERE restaurant_id = ? AND active = 1 AND available = 1 ORDER BY sort_order, id').all(rest.id);
   items.forEach(i => { try { i.tags = JSON.parse(i.tags); } catch { i.tags = []; } });
-  
+
   const categories = db.prepare('SELECT name FROM categories WHERE restaurant_id = ? ORDER BY sort_order').all(rest.id).map(c => c.name);
   res.json({ items, categories });
 });
@@ -732,7 +774,7 @@ app.get('/api/public/restaurant/:slug/buttons', (req, res) => {
 
 // Get quiz (handled locally in customer app now)
 app.get('/api/public/restaurant/:slug/quiz', (req, res) => {
-  res.json([{ local: true }]); 
+  res.json([{ local: true }]);
 });
 
 
